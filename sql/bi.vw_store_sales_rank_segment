@@ -1,0 +1,27 @@
+CREATE OR REPLACE VIEW bi.vw_store_sales_rank_segment AS
+WITH store_totals AS (
+  SELECT
+    store,
+    SUM(weekly_sales) AS total_sales
+  FROM walmart_sales
+  GROUP BY store
+),
+ranked AS (
+  SELECT
+    store,
+    total_sales,
+    DENSE_RANK() OVER (ORDER BY total_sales DESC) AS sales_rank,
+    NTILE(4) OVER (ORDER BY total_sales DESC) AS sales_quartile
+  FROM store_totals
+)
+SELECT
+  store,
+  total_sales,
+  sales_rank,
+  sales_quartile,
+  CASE
+    WHEN sales_quartile = 1 THEN 'Top 25%'
+    WHEN sales_quartile IN (2, 3) THEN 'Middle 50%'
+    ELSE 'Bottom 25%'
+  END AS performance_band
+FROM ranked;
